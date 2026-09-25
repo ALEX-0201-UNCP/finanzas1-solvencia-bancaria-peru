@@ -6,7 +6,7 @@
 # Nombres y apellidos : Chancha Santiago Alex Omar
 # Código de matrícula : 2024200492K
 # Tema N.º 9 (Unidad I): Solvencia bancaria en el Perú — ratio de capital
-#                     global y activos ponderados por riesgo (APR)
+#                        global y activos ponderados por riesgo (APR)
 # Fecha de extracción : 2026-09-24
 # ----------------------------------------------------------------------------
 # 03_limpieza_datos.py
@@ -19,8 +19,12 @@
 #      formatos distintos de reporte a lo largo del periodo 2018-2025.
 #   3. Consolida todo en un panel banco x mes.
 #   4. Completa los meses sin reporte disponible mediante interpolación
-#      lineal, tal como autorizó el docente del curso.
+#      lineal, tal como autorizó el docente del curso, dejando cada
+#      observación etiquetada en la columna 'fuente_dato' como
+#      'SBS_original' o 'interpolado', para que quede identificable cuál
+#      dato es real y cuál es una estimación estadística.
 #   5. Guarda el resultado en datos_procesados/datos_procesados_2024200492K.csv
+#      y también en formato .xlsx para revisión cómoda.
 # ============================================================================
 
 import os
@@ -46,7 +50,8 @@ def obtener_directorio_base():
 
 DIR_BASE = obtener_directorio_base()
 DIR_SBS = os.path.join(DIR_BASE, "datos_crudos", "sbs_ratio_capital_global")
-RUTA_SALIDA = os.path.join(DIR_BASE, "datos_procesados", "datos_procesados_2024200492K.csv")
+RUTA_SALIDA_CSV = os.path.join(DIR_BASE, "datos_procesados", "datos_procesados_2024200492K.csv")
+RUTA_SALIDA_XLSX = os.path.join(DIR_BASE, "datos_procesados", "datos_procesados_2024200492K.xlsx")
 
 RANGO_FECHAS = pd.date_range(start="2018-01-31", end="2025-12-31", freq="ME")  # 96 meses
 MIN_MESES_POR_BANCO = 12  # bancos con menos datos reales que esto se excluyen del panel
@@ -80,7 +85,8 @@ def convertir_a_float(valor):
 
 def texto_combinado_columna(df_raw, columna, fila_empresas):
     """Une el texto de las filas de encabezado de una columna en un solo
-    string. Es necesario porque la SBS a veces parte un título en dos filas."""
+    string. Es necesario porque la SBS a veces parte un título en dos filas
+    (ej: 'RATIO DE CAPITAL' en una fila y 'GLOBAL2/' en la siguiente)."""
     fila_inicio = max(0, fila_empresas - 5)
     texto = ""
     for fila in range(fila_inicio, fila_empresas + 1):
@@ -92,7 +98,8 @@ def texto_combinado_columna(df_raw, columna, fila_empresas):
 
 def encontrar_columna(df_raw, fila_empresas, texto_buscado):
     """Ubica el índice de columna cuyo encabezado combinado contiene el
-    texto buscado por CONTENIDO, no por posición fija."""
+    texto buscado. Busca por CONTENIDO, no por posición fija, para que
+    funcione igual aunque el archivo tenga columnas de más o de menos."""
     texto_norm = texto_buscado.upper().replace(" ", "")
     for columna in range(df_raw.shape[1]):
         if texto_norm in texto_combinado_columna(df_raw, columna, fila_empresas):
@@ -101,7 +108,17 @@ def encontrar_columna(df_raw, fila_empresas, texto_buscado):
 
 
 def encontrar_columna_apr_total(df_raw, fila_empresas):
-    """Ubica la columna del APR total, adaptándose a los formatos de la SBS."""
+    """Ubica la columna del APR total, que la SBS reportó de dos formas
+    distintas según la época:
+
+      - Formato 2021-2025 (post-Basilea III): columna directa
+        'Activos y Contingentes Ponderados por Riesgo Total'.
+      - Formato 2018-2020: solo existe el 'Requerimiento Total' de
+        patrimonio efectivo. El APR real se recupera con la identidad
+        Ratio = Patrimonio / (Requerimiento / 10%)  =>  APR = Requerimiento x 10.
+
+    Devuelve (columna, requiere_multiplicar_por_10).
+    """
     columna_grupo = encontrar_columna(df_raw, fila_empresas, "PONDERADOSPORRIESGO")
     fila_formula = fila_empresas + 1
 
@@ -125,10 +142,12 @@ def encontrar_columna_apr_total(df_raw, fila_empresas):
 # ============================================================================
 
 def extraer_datos_de_archivo(ruta_archivo):
-    """Procesa un archivo .XLS de la SBS y devuelve una lista de diccionarios."""
+    """Procesa un archivo .XLS de la SBS y devuelve una lista de diccionarios
+    (uno por banco) con las variables de solvencia de ese mes.
+    Lanza una excepción con un mensaje descriptivo si algo no calza."""
+
     df_raw = pd.read_excel(ruta_archivo, sheet_name=0, header=None)
 
-    # --- Ubica la fila de encabezado "EMPRESAS" ---
     fila_empresas = next(
         (r for r in range(min(15, len(df_raw)))
          if str(df_raw.iloc[r, 0]).strip().upper() == "EMPRESAS"),
@@ -137,7 +156,6 @@ def extraer_datos_de_archivo(ruta_archivo):
     if fila_empresas is None:
         raise ValueError("no se encontró la fila de encabezado 'EMPRESAS'")
 
-    # --- Ubica la fecha de corte del reporte ---
     fecha_str = None
     for r in range(min(6, len(df_raw))):
         fecha_parseada = pd.to_datetime(str(df_raw.iloc[r, 0]), errors="coerce")
@@ -147,7 +165,6 @@ def extraer_datos_de_archivo(ruta_archivo):
     if not fecha_str:
         raise ValueError("no se encontró la fecha del reporte")
 
-    # --- Ubica las columnas necesarias ---
     col_apr_total, requiere_x10 = encontrar_columna_apr_total(df_raw, fila_empresas)
     col_ratio_global = encontrar_columna(df_raw, fila_empresas, "RATIODECAPITALGLOBAL")
     col_patrimonio_pct = encontrar_columna(df_raw, fila_empresas, "PATRIMONIOEFECTIVODENIVEL")
@@ -156,7 +173,6 @@ def extraer_datos_de_archivo(ruta_archivo):
     if col_apr_total is None or col_ratio_global is None:
         raise ValueError("faltan columnas obligatorias (APR total o Ratio de Capital Global)")
 
-    # --- Recorre cada fila de banco hasta llegar al total del sistema ---
     registros_del_mes = []
     for idx in range(fila_empresas + 3, len(df_raw)):
         nombre_banco = str(df_raw.iloc[idx, 0]).strip()
@@ -190,7 +206,9 @@ def extraer_datos_de_archivo(ruta_archivo):
 
 
 def extraer_panel_completo(directorio_sbs):
-    """Recorre todos los archivos .XLS de la SBS y consolida sus registros."""
+    """Recorre todos los archivos .XLS de la SBS y consolida sus registros
+    en un único DataFrame. Devuelve también la lista de archivos con error."""
+
     archivos = sorted(glob.glob(os.path.join(directorio_sbs, "*.xls*")))
     print(f"Archivos encontrados en la carpeta SBS: {len(archivos)}")
 
@@ -211,16 +229,31 @@ def extraer_panel_completo(directorio_sbs):
 
     print(f"Observaciones reales extraídas : {len(df_panel)}")
     print(f"Archivos con error             : {len(archivos_con_error)} de {len(archivos)}")
+    if archivos_con_error:
+        print("Detalle de los primeros errores:")
+        for nombre, motivo in archivos_con_error[:10]:
+            print(f"   - {nombre}: {motivo}")
 
     return df_panel, archivos_con_error
 
 
 # ============================================================================
 # 4. COMPLETADO ESTADÍSTICO DE PERIODOS FALTANTES
+#    (interpolación lineal, autorizada expresamente por el docente del curso)
 # ============================================================================
 
 def completar_panel_con_interpolacion(df_panel, rango_fechas, columnas_numericas, min_meses):
-    """Reindexa el panel y rellena los huecos por banco mediante interpolación lineal."""
+    """Reindexa el panel para cubrir el rango completo de 96 meses exigido
+    y rellena los huecos por banco mediante interpolación lineal.
+
+    Cada fila queda marcada en la columna 'fuente_dato':
+      - 'SBS_original' : el mes tenía un reporte real de la SBS para ese banco.
+      - 'interpolado'   : el mes no existía en la fuente y se estimó.
+
+    Esta columna es la que permite distinguir, ante la verificación del
+    docente (numeral 2.4.6), cuáles observaciones son cotejables contra la
+    fuente oficial y cuáles son estimación estadística autorizada.
+    """
     df_panel = df_panel.copy()
     df_panel["fecha"] = pd.to_datetime(df_panel["fecha"])
     df_panel["fuente_dato"] = "SBS_original"
@@ -250,7 +283,6 @@ def completar_panel_con_interpolacion(df_panel, rango_fechas, columnas_numericas
 
     df_final = pd.concat(paneles_por_banco).reset_index().rename(columns={"index": "fecha"})
     df_final = df_final.dropna(subset=["ratio_capital_global_pct"])
-
     df_final["fecha"] = df_final["fecha"].dt.strftime("%Y-%m-%d")
 
     return df_final
@@ -260,16 +292,21 @@ def completar_panel_con_interpolacion(df_panel, rango_fechas, columnas_numericas
 # 5. RESUMEN FINAL EN CONSOLA
 # ============================================================================
 
-def imprimir_resumen(df_final, ruta_salida):
+def imprimir_resumen(df_final, ruta_csv, ruta_xlsx):
     n_total = len(df_final)
+    n_real = (df_final["fuente_dato"] == "SBS_original").sum()
+    n_interpolado = (df_final["fuente_dato"] == "interpolado").sum()
 
     print("\n" + "=" * 60)
-    print("PANEL FINAL — datos_procesados_2024200492K.csv")
+    print("PANEL FINAL — datos_procesados_2024200492K")
     print("=" * 60)
     print(f"Observaciones totales : {n_total}")
     print(f"Bancos incluidos      : {df_final['banco'].nunique()}")
     print(f"Meses cubiertos       : {df_final['fecha'].nunique()}")
-    print(f"Guardado en           : {ruta_salida}")
+    print(f"Datos reales (SBS)    : {n_real}  ({100 * n_real / n_total:.1f}%)")
+    print(f"Datos interpolados    : {n_interpolado}  ({100 * n_interpolado / n_total:.1f}%)")
+    print(f"CSV guardado en       : {ruta_csv}")
+    print(f"XLSX guardado en      : {ruta_xlsx}")
     print("=" * 60)
     print("\nPrimeras filas:")
     print(df_final.head(10))
@@ -290,20 +327,14 @@ def main():
         df_panel, RANGO_FECHAS, COLUMNAS_NUMERICAS, MIN_MESES_POR_BANCO
     )
 
-    # --- ELIMINAR LA COLUMNA 'fuente_dato' ANTES DE EXPORTAR ---
-    df_final = df_final.drop(columns=["fuente_dato"], errors="ignore")
-
-    os.makedirs(os.path.dirname(RUTA_SALIDA), exist_ok=True)
-    
-    # Guardar versión oficial en CSV
-    df_final.to_csv(RUTA_SALIDA, index=False, encoding="utf-8-sig")
-
-    # Guardar también versión en Excel (.xlsx) sin la columna fuente_dato
-    RUTA_SALIDA_XLSX = RUTA_SALIDA.replace(".csv", ".xlsx")
+    os.makedirs(os.path.dirname(RUTA_SALIDA_CSV), exist_ok=True)
+    # encoding='utf-8-sig' evita que Excel muestre mal las tildes (ej. "CrÃ©dito")
+    df_final.to_csv(RUTA_SALIDA_CSV, index=False, encoding="utf-8-sig")
+    # Versión .xlsx: se abre siempre bien ordenada en columnas, sin depender
+    # de la configuración regional de Excel (coma vs. punto y coma)
     df_final.to_excel(RUTA_SALIDA_XLSX, index=False)
-    print(f"También guardado como Excel en: {RUTA_SALIDA_XLSX}")
 
-    imprimir_resumen(df_final, RUTA_SALIDA)
+    imprimir_resumen(df_final, RUTA_SALIDA_CSV, RUTA_SALIDA_XLSX)
 
 
 if __name__ == "__main__":

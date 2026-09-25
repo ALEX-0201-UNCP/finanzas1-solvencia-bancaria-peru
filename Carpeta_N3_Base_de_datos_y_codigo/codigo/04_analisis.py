@@ -6,32 +6,24 @@
 # Nombres y apellidos : Chancha Santiago Alex Omar
 # Código de matrícula : 2024200492K
 # Tema N.º 9 (Unidad I): Solvencia bancaria en el Perú — ratio de capital
-#                       global y activos ponderados por riesgo (APR)
+#                        global y activos ponderados por riesgo (APR)
 # Fecha de extracción : 2026-09-24
 # ----------------------------------------------------------------------------
 # 04_analisis.py
 #
-# Qué hace este script:
-#   1. Carga el panel de datos procesado (datos_procesados_2024200492K.csv).
-#   2. Filtra los bancos pertenecientes al sistema bancario comercial.
-#   3. Estima los modelos de Efectos Fijos (FE) y Efectos Aleatorios (RE).
-#   4. Realiza la prueba de Hausman para la selección econométrica del modelo.
-#   5. Exporta los reportes estadísticos a la carpeta /salidas.
+# Genera tablas (.csv + .xlsx) y figuras (.png) en /salidas a partir del
+# panel procesado y de la serie del Banco Mundial.
 # ============================================================================
 
 import os
-import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-from linearmodels.panel import PanelOLS, RandomEffects
-from scipy import stats
+import matplotlib.pyplot as plt
 
 # ============================================================================
 # 1. CONFIGURACIÓN DE RUTAS
 # ============================================================================
 
 def obtener_directorio_base():
-    """Detecta la carpeta base del proyecto (un nivel arriba de /codigo)."""
     try:
         dir_actual = os.path.dirname(os.path.abspath(__file__))
     except NameError:
@@ -43,122 +35,197 @@ def obtener_directorio_base():
 
 DIR_BASE = obtener_directorio_base()
 RUTA_PANEL = os.path.join(DIR_BASE, "datos_procesados", "datos_procesados_2024200492K.csv")
+RUTA_API = os.path.join(DIR_BASE, "datos_crudos", "datos_crudos_2024200492K_bancomundial.csv")
 DIR_SALIDAS = os.path.join(DIR_BASE, "salidas")
-
 os.makedirs(DIR_SALIDAS, exist_ok=True)
 
-print("-> Cargando el panel de datos procesado...")
-df = pd.read_csv(RUTA_PANEL)
+plt.rcParams["figure.dpi"] = 120
+plt.rcParams["font.size"] = 10
+
+
+def guardar_tabla(df, nombre_base, incluir_index=False):
+    """Guarda un DataFrame en .csv (formato oficial exigido por la consigna,
+    con encoding utf-8-sig para que Excel muestre bien las tildes) y también
+    en .xlsx (para revisión cómoda, siempre ordenado en columnas)."""
+    ruta_csv = os.path.join(DIR_SALIDAS, f"{nombre_base}.csv")
+    ruta_xlsx = os.path.join(DIR_SALIDAS, f"{nombre_base}.xlsx")
+    df.to_csv(ruta_csv, index=incluir_index, encoding="utf-8-sig")
+    df.to_excel(ruta_xlsx, index=incluir_index)
+    print(f"Guardado: {ruta_csv}")
+    print(f"Guardado: {ruta_xlsx}")
+
 
 # ============================================================================
-# 2. FILTRADO EXCLUSIVO DE LOS BANCOS MÚLTIPLES
+# 2. CARGA DE DATOS
 # ============================================================================
 
-BANCOS_OBJETIVO = [
-    "BBVA", "CRÉDITO", "CREDITO", "INTERBANK", "SCOTIABANK", "BIF", "BANBIF",
-    "PICHINCHA", "GNB", "FALABELLA", "RIPLEY", "SANTANDER", "ALFIN", "AZTECA",
-    "COMMERZBANK", "ICBC", "BANK OF CHINA", "MIBANCO"
-]
+def cargar_panel():
+    df = pd.read_csv(RUTA_PANEL, encoding="utf-8-sig")
+    df["fecha"] = pd.to_datetime(df["fecha"])
+    return df
 
-patron_bancos = "|".join(BANCOS_OBJETIVO)
-df = df[df["banco"].str.upper().str.contains(patron_bancos, na=False)].copy()
 
-print(f"-> Entidades identificadas en la muestra ({df['banco'].nunique()} entidades):")
-for banco in sorted(df["banco"].unique()):
-    print(f"   - {banco}")
+def cargar_api():
+    if not os.path.exists(RUTA_API):
+        print(f"[Aviso] No se encontró {RUTA_API}; se omite el análisis comparativo con el Banco Mundial.")
+        return None
+    return pd.read_csv(RUTA_API)
 
-# ============================================================================
-# 3. PREPARACIÓN DEL PANEL DE DATOS
-# ============================================================================
-
-df["fecha"] = pd.to_datetime(df["fecha"])
-df = df.set_index(["banco", "fecha"])
-
-# Variable Endógena (Dependiente)
-y = df["ratio_capital_global_pct"]
-
-# Variables Exógenas (Independientes)
-X = df[[
-    "patrimonio_efectivo_nivel1_apr_pct",
-    "capital_ordinario_nivel1_apr_pct",
-    "apr_total"
-]]
-X = sm.add_constant(X)
-
-print(f"\nTotal de observaciones utilizadas en el modelo econométrico: {len(df)}")
 
 # ============================================================================
-# 4. ESTIMACIÓN: MODELO DE EFECTOS FIJOS (WITHIN)
+# 3. TABLA 1 — ESTADÍSTICAS DESCRIPTIVAS DEL RATIO DE CAPITAL GLOBAL
 # ============================================================================
 
-print("\n" + "=" * 60)
-print("=== ESTIMACIÓN: MODELO DE EFECTOS FIJOS ===")
-print("=" * 60)
-modelo_fe = PanelOLS(y, X, entity_effects=True, time_effects=False)
-resultado_fe = modelo_fe.fit(cov_type="robust")
-print(resultado_fe)
+def tabla_estadisticas_descriptivas(df):
+    resumen = df.groupby("fuente_dato")["ratio_capital_global_pct"].describe()
+    resumen_general = df["ratio_capital_global_pct"].describe().to_frame("Todo el panel").T
+    tabla = pd.concat([resumen_general, resumen]).round(2)
+    tabla.index.name = "grupo"
 
-ruta_salida_fe = os.path.join(DIR_SALIDAS, "resultado_efectos_fijos.txt")
-with open(ruta_salida_fe, "w", encoding="utf-8") as f:
-    f.write(str(resultado_fe))
+    guardar_tabla(tabla, "tabla1_estadisticas_descriptivas", incluir_index=True)
+    print("\n=== TABLA 1: Estadísticas descriptivas del Ratio de Capital Global (%) ===")
+    print(tabla)
+    return tabla
 
-# ============================================================================
-# 5. ESTIMACIÓN: MODELO DE EFECTOS ALEATORIOS
-# ============================================================================
-
-print("\n" + "=" * 60)
-print("=== ESTIMACIÓN: MODELO DE EFECTOS ALEATORIOS ===")
-print("=" * 60)
-modelo_re = RandomEffects(y, X)
-resultado_re = modelo_re.fit()
-print(resultado_re)
-
-ruta_salida_re = os.path.join(DIR_SALIDAS, "resultado_efectos_aleatorios.txt")
-with open(ruta_salida_re, "w", encoding="utf-8") as f:
-    f.write(str(resultado_re))
 
 # ============================================================================
-# 6. PRUEBA DE HAUSMAN (DECISIÓN ENTRE FE Y RE)
+# 4. TABLA 2 — RANKING DE BANCOS (último periodo disponible)
 # ============================================================================
 
-print("\n" + "=" * 60)
-print("=== PRUEBA DE HAUSMAN ===")
-print("=" * 60)
+def tabla_ranking_bancos(df):
+    ultima_fecha = df["fecha"].max()
+    df_ultimo = df[df["fecha"] == ultima_fecha].copy()
+    df_ultimo = df_ultimo.sort_values("ratio_capital_global_pct", ascending=False)
 
-b_fe = resultado_fe.params
-b_re = resultado_re.params
+    columnas_mostrar = ["banco", "ratio_capital_global_pct", "apr_total", "fuente_dato"]
+    tabla = df_ultimo[columnas_mostrar].reset_index(drop=True)
+    tabla.index = tabla.index + 1
+    tabla.index.name = "posicion"
+    tabla["ratio_capital_global_pct"] = tabla["ratio_capital_global_pct"].round(2)
+    tabla["apr_total"] = tabla["apr_total"].round(0)
 
-comunes = b_fe.index.intersection(b_re.index)
-b_diff = b_fe[comunes] - b_re[comunes]
+    guardar_tabla(tabla, "tabla2_ranking_bancos", incluir_index=True)
+    print(f"\n=== TABLA 2: Ranking de bancos por Ratio de Capital Global — {ultima_fecha.strftime('%Y-%m')} ===")
+    print(tabla)
+    return tabla, ultima_fecha
 
-cov_fe = resultado_fe.cov.loc[comunes, comunes]
-cov_re = resultado_re.cov.loc[comunes, comunes]
 
-diff_cov = cov_fe - cov_re
-stat_hausman = b_diff.dot(np.linalg.pinv(diff_cov)).dot(b_diff)
-grados_libertad = len(comunes)
-p_valor_hausman = 1 - stats.chi2.cdf(stat_hausman, grados_libertad)
+# ============================================================================
+# 5. FIGURA 1 — EVOLUCIÓN DEL RATIO DE CAPITAL GLOBAL DEL SISTEMA (2018-2025)
+# ============================================================================
 
-print(f"Estadístico de Chi-cuadrado de Hausman: {stat_hausman:.4f}")
-print(f"Grados de libertad: {grados_libertad}")
-print(f"P-valor: {p_valor_hausman:.4f}")
+def figura_evolucion_sistema(df):
+    serie_mensual = df.groupby("fecha")["ratio_capital_global_pct"].mean()
 
-if p_valor_hausman < 0.05:
-    resumen_hausman = "Resultado: Se rechaza H0 (p-valor < 0.05). El modelo de EFECTOS FIJOS es el adecuado."
-else:
-    resumen_hausman = "Resultado: No se rechaza H0 (p-valor >= 0.05). El modelo de EFECTOS ALEATORIOS es preferido."
+    plt.figure(figsize=(10, 5))
+    plt.plot(serie_mensual.index, serie_mensual.values, linewidth=1.8, color="#1f4e79")
+    plt.axhline(y=10, color="red", linestyle="--", linewidth=1, label="Mínimo regulatorio SBS (10%)")
+    plt.title("Evolución del Ratio de Capital Global promedio\nSistema de Banca Múltiple del Perú (2018-2025)")
+    plt.xlabel("Fecha")
+    plt.ylabel("Ratio de Capital Global (%)")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    ruta = os.path.join(DIR_SALIDAS, "figura1_evolucion_ratio_sistema.png")
+    plt.savefig(ruta)
+    plt.close()
+    print(f"\nFigura 1 guardada en: {ruta}")
 
-print(f"\n-> {resumen_hausman}")
 
-# Guardar reporte completo de la Prueba de Hausman
-ruta_salida_hausman = os.path.join(DIR_SALIDAS, "resultado_prueba_hausman.txt")
-with open(ruta_salida_hausman, "w", encoding="utf-8") as f:
-    f.write("=== PRUEBA DE HAUSMAN ===\n")
-    f.write(f"Estadistico Chi2 : {stat_hausman:.4f}\n")
-    f.write(f"Grados libertad  : {grados_libertad}\n")
-    f.write(f"P-valor          : {p_valor_hausman:.4f}\n\n")
-    f.write(f"{resumen_hausman}\n")
+# ============================================================================
+# 6. FIGURA 2 — RANKING DE BANCOS (barras horizontales)
+# ============================================================================
 
-print("\n" + "=" * 60)
-print("¡Análisis econométrico finalizado! Resultados guardados en /salidas.")
-print("=" * 60)
+def figura_ranking_bancos(tabla_ranking, ultima_fecha):
+    tabla_grafico = tabla_ranking.sort_values("ratio_capital_global_pct")
+    colores = ["#c0392b" if f == "interpolado" else "#1f4e79" for f in tabla_grafico["fuente_dato"]]
+
+    plt.figure(figsize=(9, 8))
+    plt.barh(tabla_grafico["banco"], tabla_grafico["ratio_capital_global_pct"], color=colores)
+    plt.axvline(x=10, color="red", linestyle="--", linewidth=1, label="Mínimo regulatorio SBS (10%)")
+    plt.title(f"Ratio de Capital Global por banco — {ultima_fecha.strftime('%Y-%m')}")
+    plt.xlabel("Ratio de Capital Global (%)")
+    plt.legend()
+    plt.grid(axis="x", alpha=0.3)
+    plt.tight_layout()
+    ruta = os.path.join(DIR_SALIDAS, "figura2_ranking_bancos.png")
+    plt.savefig(ruta)
+    plt.close()
+    print(f"Figura 2 guardada en: {ruta}")
+
+
+# ============================================================================
+# 7. FIGURA 3 — DISPERSIÓN: TAMAÑO DEL BANCO (APR) vs. RATIO DE CAPITAL GLOBAL
+# ============================================================================
+
+def figura_dispersión_apr_vs_ratio(df):
+    ultima_fecha = df["fecha"].max()
+    df_ultimo = df[df["fecha"] == ultima_fecha]
+
+    plt.figure(figsize=(8, 6))
+    plt.scatter(df_ultimo["apr_total"], df_ultimo["ratio_capital_global_pct"],
+                s=60, alpha=0.7, color="#1f4e79", edgecolors="black")
+    for _, fila in df_ultimo.iterrows():
+        plt.annotate(fila["banco"].split("(")[0].strip()[:15],
+                     (fila["apr_total"], fila["ratio_capital_global_pct"]),
+                     fontsize=7, alpha=0.8, xytext=(3, 3), textcoords="offset points")
+    plt.xscale("log")
+    plt.title(f"Tamaño del banco (APR, escala log) vs. Ratio de Capital Global\n{ultima_fecha.strftime('%Y-%m')}")
+    plt.xlabel("Activos Ponderados por Riesgo — APR (escala logarítmica)")
+    plt.ylabel("Ratio de Capital Global (%)")
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    ruta = os.path.join(DIR_SALIDAS, "figura3_apr_vs_ratio.png")
+    plt.savefig(ruta)
+    plt.close()
+    print(f"Figura 3 guardada en: {ruta}")
+
+
+# ============================================================================
+# 8. TABLA 3 — COMPARACIÓN CON EL PROMEDIO REGIONAL/MUNDIAL (Banco Mundial)
+# ============================================================================
+
+def tabla_comparacion_banco_mundial(df_panel, df_api):
+    if df_api is None:
+        return None
+
+    df_api = df_api.copy()
+    df_panel_anual = df_panel.copy()
+    df_panel_anual["anio"] = df_panel_anual["fecha"].dt.year
+    promedio_anual_sbs = df_panel_anual.groupby("anio")["ratio_capital_global_pct"].mean().reset_index()
+    promedio_anual_sbs.columns = ["anio", "ratio_capital_global_pct_SBS_promedio"]
+
+    tabla = pd.merge(promedio_anual_sbs, df_api, on="anio", how="inner").round(2)
+
+    guardar_tabla(tabla, "tabla3_comparacion_banco_mundial", incluir_index=False)
+    print("\n=== TABLA 3: Comparación panel SBS (promedio anual) vs. indicador Banco Mundial ===")
+    print(tabla)
+    return tabla
+
+
+# ============================================================================
+# 9. PROGRAMA PRINCIPAL
+# ============================================================================
+
+def main():
+    print("Cargando datos procesados...")
+    df_panel = cargar_panel()
+    df_api = cargar_api()
+
+    print(f"Panel cargado: {len(df_panel)} observaciones, {df_panel['banco'].nunique()} bancos, "
+          f"{df_panel['fecha'].nunique()} meses.\n")
+
+    tabla_estadisticas_descriptivas(df_panel)
+    tabla_ranking, ultima_fecha = tabla_ranking_bancos(df_panel)
+    figura_evolucion_sistema(df_panel)
+    figura_ranking_bancos(tabla_ranking, ultima_fecha)
+    figura_dispersión_apr_vs_ratio(df_panel)
+    tabla_comparacion_banco_mundial(df_panel, df_api)
+
+    print(f"\n{'='*60}")
+    print(f"Análisis completo. Todos los archivos guardados en: {DIR_SALIDAS}")
+    print(f"{'='*60}")
+
+
+if __name__ == "__main__":
+    main()

@@ -33,9 +33,11 @@ del sistema de banca múltiple, para el periodo enero 2018 – diciembre 2025 (9
   Patrimonio Efectivo y Ratio de Capital Global" (reporte B-2402)
 - **URL base:** `https://intranet2.sbs.gob.pe/estadistica/financiera/{año}/{Mes}/B-2402-{abrev}{año}.XLS`
 - **Robots.txt verificado el 23/09/2026:** no se encontró archivo publicado en
-  `intranet2.sbs.gob.pe`; sin restricciones declaradas para la ruta utilizada.
+  `intranet2.sbs.gob.pe`; sin restricciones declaradas para la ruta utilizada
+  (ver detalle en `incidencias_fuente.md`).
 - **Cobertura:** 96 meses solicitados (enero 2018 – diciembre 2025); 88 de 96 archivos
-  descargados exitosamente (8 no disponibles en el servidor, ver `log_ejecucion.txt`)
+  descargados exitosamente (8 no disponibles en el servidor, ver `incidencias_fuente.md`
+  y `log_ejecucion.txt`)
 - **Pausa entre solicitudes:** 1 segundo | **User-Agent identificado:** sí
 - **Script:** `codigo/02_scraping_web.py`
 - **Salida:** `datos_crudos/sbs_ratio_capital_global/*.XLS` (88 archivos)
@@ -56,21 +58,28 @@ del sistema de banca múltiple, para el periodo enero 2018 – diciembre 2025 (9
   2025). De ellas, **1,419 (67.2%) son datos originales de la SBS** y **693 (32.8%)
   son valores interpolados**, identificados explícitamente en la columna
   `fuente_dato` de `datos_procesados_2024200492K.csv` (SBS_original / interpolado).
-- **Salida:** `datos_procesados/datos_procesados_2024200492K.csv`
+- **Salida:** `datos_procesados/datos_procesados_2024200492K.csv` (+ versión .xlsx
+  para revisión cómoda, con la misma información)
 
 ## Análisis
 - **Script:** `codigo/04_analisis.py`
-- Genera las tablas y figuras del artículo a partir del archivo procesado,
-  guardadas en /salidas.
+- Genera 3 tablas y 3 figuras a partir del archivo procesado, guardadas en /salidas
+  (en formato .csv/.png y también .xlsx para revisión cómoda):
+  - Tabla 1: estadísticas descriptivas del Ratio de Capital Global
+  - Tabla 2: ranking de bancos por Ratio de Capital Global (último periodo)
+  - Tabla 3: comparación del promedio anual del panel SBS vs. indicador del Banco Mundial
+  - Figura 1: evolución del Ratio de Capital Global promedio del sistema (2018-2025)
+  - Figura 2: ranking de bancos (gráfico de barras)
+  - Figura 3: dispersión APR vs. Ratio de Capital Global
 
 ## Diccionario de variables
-Ver `diccionario_variables.xlsx` (o .md) para la definición, unidad de medida,
-frecuencia y fuente exacta de cada variable.
+Ver `diccionario_variables.xlsx` para la definición, unidad de medida, frecuencia
+y fuente exacta de cada variable del panel.
 
 ## Orden de ejecución
 1. codigo/01_extraccion_api.py       -> genera datos_crudos_2024200492K_bancomundial.csv
 2. codigo/02_scraping_web.py         -> genera 88 archivos .XLS en datos_crudos/sbs_ratio_capital_global/
-3. codigo/03_limpieza_datos.py       -> genera datos_procesados_2024200492K.csv
+3. codigo/03_limpieza_datos.py       -> genera datos_procesados_2024200492K.csv (+ .xlsx)
 4. codigo/04_analisis.py             -> genera tablas y figuras en /salidas
 
 ## Entorno de ejecución
@@ -80,7 +89,7 @@ frecuencia y fuente exacta de cada variable.
 
 ## Verificación de integridad
 - **Archivo verificado:** `datos_procesados/datos_procesados_2024200492K.csv`
-- **Hash SHA-256:** f22e4bc5e45ea4f5973de6c1408b6bd9566e4987a757a63c397aa9c18607e05c
+- **Hash SHA-256:** f557c460cd6966d6380561093e6c222fb7e787d6b20cac602916ed2491bc9b86
 - Este hash corresponde al archivo tal como fue entregado; una reejecución posterior
   del script 03 puede generar un hash distinto si la fuente (SBS) revisó datos hacia
   atrás, lo cual no invalida el trabajo (numeral 2.4.5 de la consigna), siempre que
@@ -90,5 +99,5 @@ frecuencia y fuente exacta de cada variable.
 No aplica — este trabajo no emplea simulación de Monte Carlo ni remuestreo.
 
 ## Incidencias de fuente
-Ninguna incidencia de bloqueo. Ver incidencias_fuente.md si se documentara alguna
-en el futuro.
+Ver `incidencias_fuente.md`: verificación de robots.txt y detalle de los 8 meses
+no descargados de la SBS.
