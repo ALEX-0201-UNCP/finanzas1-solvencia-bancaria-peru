@@ -1,0 +1,6 @@
+=== PRUEBA DE HAUSMAN ===
+Estadistico Chi2 : -6.7127
+Grados libertad  : 4
+P-valor          : 1.0000
+
+Resultado: No se rechaza H0 (p-valor >= 0.05). El modelo de EFECTOS ALEATORIOS es preferido.
