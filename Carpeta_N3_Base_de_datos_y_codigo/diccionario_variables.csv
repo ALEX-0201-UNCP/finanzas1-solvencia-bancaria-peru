@@ -1,0 +1,9 @@
+﻿Variable Dataset,Nombre Formal,Tipo,Unidad de Medida,Fuente,Descripción
+banco,Entidad Bancaria,Cualitativa / Identificador,Texto,SBS Perú,Nombre estandarizado de la institución de banca múltiple.
+fecha,Periodo Mensual,Temporal / Identificador,YYYY-MM-DD,SBS Perú,Fecha correspondiente al último día del mes evaluado (2018-01 a 2025-12).
+ratio_capital_global_pct,Ratio de Capital Global,Endógena (Y),Porcentaje (%),SBS Reporte B-2402,Patrimonio Efectivo / APR. Métrica regulatoria principal de solvencia bancaria.
+roe_pct,Rentabilidad del Patrimonio (ROE),Exógena (X1),Porcentaje (%),SBS Reporte B-2201,(Utilidad Neta Anualizada / Patrimonio) * 100. Métrica de rentabilidad bancaria.
+cartera_atrasada_pct,Ratio de Cartera Atrasada,Exógena (X2),Porcentaje (%),SBS Reporte B-2362,Total Créditos Atrasados / Total Créditos Directos. Métrica de riesgo de crédito.
+apr_total_soles,Activos Ponderados por Riesgo (APR),Exógena / Control (X3),Miles de S/.,SBS Reporte B-2402,Suma total de activos y contingentes ponderados por riesgo del banco.
+ln_apr_total_soles,Logaritmo del Tamaño del Banco,Exógena / Control (X3),Logaritmo natural,Transformación propia,ln(apr_total_soles). Escala operativa del banco para controlar heterogeneidad.
+banco,Entidad Bancaria de Banca Múltiple,Cualitativa / Identificador,Texto,"SBS Perú (Reportes B-2402, B-2201, B-2362)","Nombre estandarizado de las 16 instituciones de banca múltiple evaluadas en el Perú (BCP, BBVA, Interbank, Scotiabank, BanBif, Pichincha, Mibanco, GNB, Falabella, Ripley, Bancom, Alfin, Citibank, ICBC, Santander, Bank of China)."

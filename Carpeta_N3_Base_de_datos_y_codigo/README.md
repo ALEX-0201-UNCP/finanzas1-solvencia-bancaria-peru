@@ -1,103 +1,105 @@
-# Solvencia bancaria en el Perú: ratio de capital global y activos ponderados por riesgo
+# Solvencia bancaria en el Perú: ratio de capital global, rentabilidad y riesgo de crédito (2018-2025)
 
-**Nombres y apellidos:** Chancha Santiago Alex Omar
-**Código de matrícula:** 2024200492K
-**Curso:** Finanzas I (055D) — Ciclo V, Escuela Profesional de Economía, UNCP
-**Docente:** Dr. Ciro Iván Machacuay Meza
-**Tema N.º 9 del temario, Unidad I**
-**Fecha de corte de extracción:** 2026-09-24
-**Repositorio GitHub:** https://github.com/ALEX-0201-UNCP/finanzas1-solvencia-bancaria-peru
+**Nombres y apellidos:** Chancha Santiago Alex Omar  
+**Código de matrícula:** 2024200492K  
+**Curso:** Finanzas I (055D) — Ciclo V, Escuela Profesional de Economía, UNCP  
+**Docente:** Dr. Ciro Iván Machacuay Meza  
+**Tema N.º 9 del temario, Unidad I:** Solvencia bancaria en el Perú — ratio de capital global y activos ponderados por riesgo (APR)  
+**Fecha de corte de extracción:** 2026-09-26  
+**Repositorio GitHub:** https://github.com/ALEX-0201-UNCP/finanzas1-solvencia-bancaria-peru  
 
-## Objetivo del artículo
-Analizar la evolución de la solvencia bancaria en el Perú (ratio de capital global y
-activos ponderados por riesgo) y su relación con la rentabilidad y el riesgo de crédito
-del sistema de banca múltiple, para el periodo enero 2018 – diciembre 2025 (96 meses).
+---
 
-## Fuentes de datos y endpoints
+## Objetivo de la investigación
+Analizar los determinantes econométricos y la evolución de la solvencia bancaria en el Perú (medida a través del **Ratio de Capital Global**) y su relación con la rentabilidad del patrimonio (**ROE**), el riesgo de crédito (**Cartera Atrasada / Morosidad**) y la escala de la entidad (**ln APR**), para el sistema de banca múltiple durante el periodo **enero 2018 – diciembre 2025 (96 meses)**.
+
+---
+
+## Fuentes de datos y estrategia de extracción
 
 ### Vía 1 — API (Banco Mundial, base GFDD)
 - **Fuente:** World Bank Open Data — Global Financial Development Database (GFDD)
 - **Endpoint base:** `https://api.worldbank.org/v2/country/PER/indicator/{codigo}`
-- **Indicadores extraídos:**
-  - `GFDD.SI.05` — Bank regulatory capital to risk-weighted assets (%)
-  - `GFDD.SI.03` — Bank capital to total assets (%)
-  - `GFDD.SI.02` — Bank nonperforming loans to gross loans (%)
-  - `GFDD.EI.05` — Bank return on assets (%)
-  - `GFDD.EI.06` — Bank return on equity (%)
-- **Cobertura:** Perú, serie anual 2000–2025 (agregado nacional)
+- **Indicadores agregados extraídos:**
+  - `GFDD.SI.05`: Bank regulatory capital to risk-weighted assets (%)
+  - `GFDD.SI.03`: Bank capital to total assets (%)
+  - `GFDD.SI.02`: Bank nonperforming loans to gross loans (%)
+  - `GFDD.EI.05`: Bank return on assets (%)
+  - `GFDD.EI.06`: Bank return on equity (%)
+- **Cobertura:** Serie anual Perú (2000–2025)
 - **Script:** `codigo/01_extraccion_api.py`
 - **Salida:** `datos_crudos/datos_crudos_2024200492K_bancomundial.csv`
 
-### Vía 2 — Descarga programática (SBS)
-- **Fuente:** Superintendencia de Banca, Seguros y AFP (SBS) — "Requerimiento de
-  Patrimonio Efectivo y Ratio de Capital Global" (reporte B-2402)
-- **URL base:** `https://intranet2.sbs.gob.pe/estadistica/financiera/{año}/{Mes}/B-2402-{abrev}{año}.XLS`
-- **Robots.txt verificado el 23/09/2026:** no se encontró archivo publicado en
-  `intranet2.sbs.gob.pe`; sin restricciones declaradas para la ruta utilizada
-  (ver detalle en `incidencias_fuente.md`).
-- **Cobertura:** 96 meses solicitados (enero 2018 – diciembre 2025); 88 de 96 archivos
-  descargados exitosamente (8 no disponibles en el servidor, ver `incidencias_fuente.md`
-  y `log_ejecucion.txt`)
-- **Pausa entre solicitudes:** 1 segundo | **User-Agent identificado:** sí
+### Vía 2 — Scraping programático (SBS Perú)
+- **Fuente:** Superintendencia de Banca, Seguros y AFP (SBS) — Reportes estadísticos mensuales
+- **Estructura de endpoints consultados:**
+  - **Reporte B-2402:** Ratio de Capital Global y Requerimiento de Patrimonio Efectivo / APR
+  - **Reporte B-2201:** Balance General y Estado de Ganancias y Pérdidas (para cálculo de ROE)
+  - **Reporte B-2362:** Morosidad según tipo y modalidad de crédito (Cartera Atrasada)
+- **Cumplimiento ético y técnico:** Pausa mínima de 1 segundo entre solicitudes HTTP y User-Agent identificatorio. Bitácora de auditoría en `log_ejecucion.txt`.
 - **Script:** `codigo/02_scraping_web.py`
-- **Salida:** `datos_crudos/sbs_ratio_capital_global/*.XLS` (88 archivos)
+- **Salidas:** Archivos `.XLS` organizados en:
+  - `datos_crudos/sbs_ratio_capital_global/`
+  - `datos_crudos/sbs_roe/`
+  - `datos_crudos/sbs_cartera_atrasada/`
 
-## Procesamiento y completado estadístico
+---
+
+## Procesamiento, estandarización y completado estadístico
 - **Script:** `codigo/03_limpieza_datos.py`
-- De los 88 archivos SBS descargados, se extrajeron 1,451 observaciones reales
-  (banco x mes), reconociendo automáticamente dos formatos distintos usados por la
-  SBS a lo largo del periodo:
-  - Formato 2018-2020: APR total derivado de "Requerimiento Total de Patrimonio
-    Efectivo" mediante la fórmula APR = Requerimiento_total x 10.
-  - Formato 2021-2025 (post-Basilea III): APR total leído directamente de la
-    columna "Activos y Contingentes Ponderados por Riesgo Total".
-- **Completado de periodos faltantes:** autorizado expresamente por el docente del
-  curso. Los meses sin reporte disponible en la fuente oficial se completaron
-  mediante **interpolación lineal** por banco.
-- **Panel final:** 2,112 observaciones · 22 bancos · 96 meses (enero 2018 - diciembre
-  2025). De ellas, **1,419 (67.2%) son datos originales de la SBS** y **693 (32.8%)
-  son valores interpolados**, identificados explícitamente en la columna
-  `fuente_dato` de `datos_procesados_2024200492K.csv` (SBS_original / interpolado).
-- **Salida:** `datos_procesados/datos_procesados_2024200492K.csv` (+ versión .xlsx
-  para revisión cómoda, con la misma información)
+- **Lectura y procesamiento heterogéneo por reporte:**
+  1. **Ratio de Capital Global y APR (`B-2402`):** Lectura de entidades en filas, ajuste dinámico por regulación Basilea III y conversión histórica a APR.
+  2. **ROE (`B-2201`):** Anualización del flujo acumulado de Resultado Neto ($U_n / m \times 12$) sobre el Patrimonio del mes.
+  3. **Cartera Atrasada (`B-2362`):** Lectura de entidades en columnas; extracción de la fila *Total Créditos Directos*.
+- **Completado de periodos y balanceo de panel:** Relleno de vacíos mediante **interpolación lineal intrabanco** autorizada para consolidar un panel balanceado.
+- **Estructura final del dataset:** Panel balanceado ($N \times T$, banco $\times$ mes, 2018-01 a 2025-12).
+- **Salidas guardadas:** `datos_procesados/datos_procesados_2024200492K.csv` y versión `.xlsx`.
 
-## Análisis
-- **Script:** `codigo/04_analisis.py`
-- Genera 3 tablas y 3 figuras a partir del archivo procesado, guardadas en /salidas
-  (en formato .csv/.png y también .xlsx para revisión cómoda):
-  - Tabla 1: estadísticas descriptivas del Ratio de Capital Global
-  - Tabla 2: ranking de bancos por Ratio de Capital Global (último periodo)
-  - Tabla 3: comparación del promedio anual del panel SBS vs. indicador del Banco Mundial
-  - Figura 1: evolución del Ratio de Capital Global promedio del sistema (2018-2025)
-  - Figura 2: ranking de bancos (gráfico de barras)
-  - Figura 3: dispersión APR vs. Ratio de Capital Global
+---
 
-## Diccionario de variables
-Ver `diccionario_variables.xlsx` para la definición, unidad de medida, frecuencia
-y fuente exacta de cada variable del panel.
+## Diccionario de variables del panel
 
-## Orden de ejecución
-1. codigo/01_extraccion_api.py       -> genera datos_crudos_2024200492K_bancomundial.csv
-2. codigo/02_scraping_web.py         -> genera 88 archivos .XLS en datos_crudos/sbs_ratio_capital_global/
-3. codigo/03_limpieza_datos.py       -> genera datos_procesados_2024200492K.csv (+ .xlsx)
-4. codigo/04_analisis.py             -> genera tablas y figuras en /salidas
+| Variable | Nombre en dataset | Tipo | Unidad de Medida | Descripción y Fuente SBS |
+| :--- | :--- | :--- | :--- | :--- |
+| **Solvencia (Y)** | `ratio_capital_global_pct` | Endógena | Porcentaje (%) | Patrimonio efectivo / APR. Reporte B-2402. |
+| **Rentabilidad (X1)** | `roe_pct` | Exógena | Porcentaje (%) | (Utilidad Neta anualizada / Patrimonio) $\times 100$. Reporte B-2201. |
+| **Riesgo Crédito (X2)** | `cartera_atrasada_pct` | Exógena | Porcentaje (%) | Morosidad sobre créditos directos totales. Reporte B-2362. |
+| **Escala / Tamaño (X3)** | `apr_total_soles` / `ln_apr_total_soles` | Exógena (Control) | Miles de S/. / Logaritmo | Activos Ponderados por Riesgo Total. Reporte B-2402. |
+
+---
+
+## Modelación econométrica y diagnóstico
+- **Script:** `codigo/05_analisis_econometrico.py`
+- **Modelos de datos de panel estimados:**
+  - **Pooled OLS**, **Efectos Fijos (FE)** y **Efectos Aleatorios (RE)** con errores estándar robustos agrupados por banco (`cov_type=clustered`).
+  - **Prueba de Hausman:** Evaluada sobre la diferencia de matrices de covarianza de los estimadores para elegir de forma rigurosa entre FE y RE.
+  - **Diagnóstico de multicolinealidad:** Cálculo del **VIF** (Factor de Inflación de Varianza).
+- **Productos generados en `/salidas`:**
+  - `tabla1_estadisticas_descriptivas.csv` / `.xlsx`
+  - `tabla2_matriz_correlacion.csv` / `.xlsx`
+  - `tabla4_comparacion_modelos_panel.txt`
+  - `tabla5_vif_multicolinealidad.csv` / `.xlsx`
+  - `tabla6_test_hausman.txt`
+  - Salidas gráficas PNG (`figura1` a `figura4`) de evolución del sistema y dispersiones con líneas de tendencia.
+
+---
+
+## Secuencia de ejecución
+Para reproducir la totalidad del trabajo desde cero, ejecute los scripts en el siguiente orden:
+1. `python codigo/01_extraccion_api.py` ➔ Descarga datos macro del Banco Mundial.
+2. `python codigo/02_scraping_web.py` ➔ Descarga los 3 reportes SBS (`B-2402`, `B-2201`, `B-2362`) en `/datos_crudos`.
+3. `python codigo/03_limpieza_datos.py` ➔ Procesa y consolida el panel balanceado de 4 variables.
+4. `python codigo/05_analisis_econometrico.py` ➔ Ejecuta los modelos econométricos (Pooled OLS, FE, RE), VIF, test de Hausman y gráficos.
+5. `python codigo/00_generar_entregables_carpeta3.py` ➔ Genera/actualiza todos los archivos de documentación de la Carpeta N°3.
+
+---
 
 ## Entorno de ejecución
-- **Lenguaje:** Python 3.12.11 | packaged by conda-forge | (main, Jun 4 2025, 14:29:09) [MSC v.1943 64 bit (AMD64)]
-- **IDE:** Spyder 6 (entorno Conda: spyder-runtime)
-- **Librerías y versiones:** ver requirements.txt
+- **Lenguaje:** Python 3.12+ (Spyder 6 / VS Code)
+- **Librerías principales:** `pandas`, `numpy`, `matplotlib`, `statsmodels`, `linearmodels`, `scipy`, `openpyxl`, `requests`.
+
+---
 
 ## Verificación de integridad
-- **Archivo verificado:** `datos_procesados/datos_procesados_2024200492K.csv`
-- **Hash SHA-256:** f557c460cd6966d6380561093e6c222fb7e787d6b20cac602916ed2491bc9b86
-- Este hash corresponde al archivo tal como fue entregado; una reejecución posterior
-  del script 03 puede generar un hash distinto si la fuente (SBS) revisó datos hacia
-  atrás, lo cual no invalida el trabajo (numeral 2.4.5 de la consigna), siempre que
-  el log_ejecucion.txt acredite fecha y hora de la extracción original.
-
-## Semilla aleatoria
-No aplica — este trabajo no emplea simulación de Monte Carlo ni remuestreo.
-
-## Incidencias de fuente
-Ver `incidencias_fuente.md`: verificación de robots.txt y detalle de los 8 meses
-no descargados de la SBS.
+- **Archivo de datos principal:** `datos_procesados/datos_procesados_2024200492K.csv`
+- **Trazabilidad:** Verificada en `log_ejecucion.txt` con registro completo de peticiones HTTP, estado y tiempos de descarga.
