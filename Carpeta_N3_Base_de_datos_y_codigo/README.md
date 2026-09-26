@@ -80,8 +80,17 @@ Analizar la evolución de la solvencia bancaria en el Perú (medida con el **Rat
   - `tabla3_cobertura_panel.csv` / `.xlsx`
   - `tabla4_comparacion_modelos_panel.txt`
   - `tabla5_vif_multicolinealidad.csv` / `.xlsx`
-  - `tabla6_test_hausman.txt`
+  - `tabla6_test_hausman.txt` y `nota_winsorizacion.txt`
   - `figura1_evolucion_ratio_sistema.png` (ratio del sistema ponderado por APR y mediana) y `figura2` a `figura4` (dispersiones).
+
+## Pruebas de robustez
+- **Script:** `codigo/05_robustez.py`
+- **Variantes del modelo de efectos fijos:** base, sin winsorizar, sin Bank of China, sin Alfin Banco, 2018–2022, 2023–2025 y sin 2020–2021, con errores estándar agrupados por banco.
+- **Productos en `/salidas`:**
+  - `tabla7_evolucion_anual.csv` / `.xlsx`
+  - `tabla8_promedios_por_banco.csv` / `.xlsx`
+  - `tabla9_robustez.csv` / `.xlsx` / `.txt`
+  - `figura5_roe_cartera_evolucion.png`, `figura6_rcg_por_banco.png` y `figura7_robustez_cartera.png`
 
 ---
 
@@ -91,7 +100,8 @@ Instalar dependencias con `pip install -r requirements.txt` y ejecutar en este o
 2. `python codigo/02_scraping_web.py` ➔ Descarga los 3 reportes SBS en `/datos_crudos` (omite los ya descargados).
 3. `python codigo/03_limpieza_datos.py` ➔ Construye el panel de 4 variables para los 16 bancos.
 4. `python codigo/04_analisis.py` ➔ Tablas, figuras, modelos de panel y pruebas de especificación.
-5. `python codigo/00_generar_entregables_carpeta3.py` ➔ Actualiza README, diccionario, requirements e incidencias con las cifras del panel.
+5. `python codigo/05_robustez.py` ➔ Evolución anual, promedios por banco, pruebas de robustez y figuras 5 a 7.
+6. `python codigo/00_generar_entregables_carpeta3.py` ➔ Actualiza README, diccionario, requirements e incidencias con las cifras del panel.
 
 ---
 

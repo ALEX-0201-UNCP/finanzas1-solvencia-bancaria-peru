@@ -5,4 +5,4 @@ ratio_capital_global_pct,Ratio de Capital Global,Endógena (Y),Porcentaje (%),SB
 roe_pct,Rentabilidad del Patrimonio (ROE),Exógena (X1),Porcentaje (%),SBS Reporte B-2201,(Resultado neto acumulado / meses transcurridos × 12) / Patrimonio × 100.
 cartera_atrasada_pct,Ratio de Cartera Atrasada,Exógena (X2),Porcentaje (%),SBS Reporte B-2362,Créditos atrasados / Créditos directos totales (fila 'Total Créditos Directos').
 apr_total_soles,Activos Ponderados por Riesgo (APR),Exógena / Control (X3),Miles de S/.,SBS Reporte B-2402,Activos y contingentes ponderados por riesgo total (2018-2020: requerimiento total × 10).
-ln_apr_total_soles,Logaritmo del Tamaño del Banco,Exógena / Control (X3),Logaritmo natural,Transformación propia (04_analisis.py),ln(apr_total_soles). Escala del banco para controlar heterogeneidad.
+ln_apr_total_soles,Logaritmo del Tamaño del Banco,Exógena / Control (X3),Logaritmo natural,Transformación propia (04_analisis.py y 05_robustez.py),ln(apr_total_soles). Escala del banco para controlar heterogeneidad.

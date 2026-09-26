@@ -40,3 +40,7 @@
 9. **Valores extremos de ROE y ratio de capital:**
    - *Incidencia:* Entidades con patrimonio casi nulo (Alfin Banco 2021-2022) generan ROE de miles de por ciento; bancos recién creados tienen ratios de capital muy altos por su APR pequeño.
    - *Solución:* Winsorización al percentil 1 y 99 de ambas variables en `04_analisis.py` (detalle en `salidas/nota_winsorizacion.txt`).
+
+10. **Sensibilidad de los resultados a la muestra:**
+   - *Incidencia:* Los valores extremos de Alfin Banco, la entrada tardía de Bank of China, la pandemia y la reforma de Basilea III de 2023 podrían condicionar los coeficientes estimados.
+   - *Solución:* El script `05_robustez.py` reestima el modelo de efectos fijos sin winsorizar, sin Bank of China, sin Alfin Banco, por subperiodos (2018-2022 y 2023-2025) y sin 2020-2021 (detalle en `salidas/tabla9_robustez.txt`).

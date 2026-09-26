@@ -4,9 +4,9 @@
 # Nombres y apellidos : Chancha Santiago Alex Omar
 # Código de matrícula : 2024200492K
 # ----------------------------------------------------------------------------
-# 00_generar_entregables_carpeta3.py  (v2)
-# Ejecutar AL FINAL (después de 03 y 04): lee el panel procesado y los datos
-# del Banco Mundial para que el README y el diccionario muestren cifras
+# 00_generar_entregables_carpeta3.py  (v3)
+# Ejecutar AL FINAL (después de 03, 04 y 05): lee el panel procesado y los
+# datos del Banco Mundial para que el README y el diccionario muestren cifras
 # reales (n.º de bancos, observaciones, cobertura) y no valores escritos a mano.
 # ============================================================================
 
@@ -156,6 +156,10 @@ contenido_incidencias = r"""# Registro de Incidencias de Fuente y Trazabilidad
 9. **Valores extremos de ROE y ratio de capital:**
    - *Incidencia:* Entidades con patrimonio casi nulo (Alfin Banco 2021-2022) generan ROE de miles de por ciento; bancos recién creados tienen ratios de capital muy altos por su APR pequeño.
    - *Solución:* Winsorización al percentil 1 y 99 de ambas variables en `04_analisis.py` (detalle en `salidas/nota_winsorizacion.txt`).
+
+10. **Sensibilidad de los resultados a la muestra:**
+   - *Incidencia:* Los valores extremos de Alfin Banco, la entrada tardía de Bank of China, la pandemia y la reforma de Basilea III de 2023 podrían condicionar los coeficientes estimados.
+   - *Solución:* El script `05_robustez.py` reestima el modelo de efectos fijos sin winsorizar, sin Bank of China, sin Alfin Banco, por subperiodos (2018-2022 y 2023-2025) y sin 2020-2021 (detalle en `salidas/tabla9_robustez.txt`).
 """
 with open(ruta_incidencias, "w", encoding="utf-8") as f:
     f.write(contenido_incidencias)
@@ -219,7 +223,7 @@ datos_diccionario = [
         "Nombre Formal": "Logaritmo del Tamaño del Banco",
         "Tipo": "Exógena / Control (X3)",
         "Unidad de Medida": "Logaritmo natural",
-        "Fuente": "Transformación propia (04_analisis.py)",
+        "Fuente": "Transformación propia (04_analisis.py y 05_robustez.py)",
         "Descripción": "ln(apr_total_soles). Escala del banco para controlar heterogeneidad.",
     },
 ]
@@ -319,8 +323,17 @@ lineas_readme = [
     "  - `tabla3_cobertura_panel.csv` / `.xlsx`",
     "  - `tabla4_comparacion_modelos_panel.txt`",
     "  - `tabla5_vif_multicolinealidad.csv` / `.xlsx`",
-    "  - `tabla6_test_hausman.txt`",
+    "  - `tabla6_test_hausman.txt` y `nota_winsorizacion.txt`",
     "  - `figura1_evolucion_ratio_sistema.png` (ratio del sistema ponderado por APR y mediana) y `figura2` a `figura4` (dispersiones).",
+    "",
+    "## Pruebas de robustez",
+    "- **Script:** `codigo/05_robustez.py`",
+    "- **Variantes del modelo de efectos fijos:** base, sin winsorizar, sin Bank of China, sin Alfin Banco, 2018–2022, 2023–2025 y sin 2020–2021, con errores estándar agrupados por banco.",
+    "- **Productos en `/salidas`:**",
+    "  - `tabla7_evolucion_anual.csv` / `.xlsx`",
+    "  - `tabla8_promedios_por_banco.csv` / `.xlsx`",
+    "  - `tabla9_robustez.csv` / `.xlsx` / `.txt`",
+    "  - `figura5_roe_cartera_evolucion.png`, `figura6_rcg_por_banco.png` y `figura7_robustez_cartera.png`",
     "",
     "---",
     "",
@@ -330,7 +343,8 @@ lineas_readme = [
     "2. `python codigo/02_scraping_web.py` ➔ Descarga los 3 reportes SBS en `/datos_crudos` (omite los ya descargados).",
     "3. `python codigo/03_limpieza_datos.py` ➔ Construye el panel de 4 variables para los 16 bancos.",
     "4. `python codigo/04_analisis.py` ➔ Tablas, figuras, modelos de panel y pruebas de especificación.",
-    "5. `python codigo/00_generar_entregables_carpeta3.py` ➔ Actualiza README, diccionario, requirements e incidencias con las cifras del panel.",
+    "5. `python codigo/05_robustez.py` ➔ Evolución anual, promedios por banco, pruebas de robustez y figuras 5 a 7.",
+    "6. `python codigo/00_generar_entregables_carpeta3.py` ➔ Actualiza README, diccionario, requirements e incidencias con las cifras del panel.",
     "",
     "---",
     "",
