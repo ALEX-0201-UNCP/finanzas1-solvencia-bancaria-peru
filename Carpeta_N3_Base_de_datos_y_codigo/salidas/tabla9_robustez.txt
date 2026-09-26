@@ -1,0 +1,31 @@
+== Base | obs = 1494 | bancos = 16 | R2 within = 0.2536
+   roe_pct                       0.08862**  (0.03477)  p = 0.0108
+   cartera_atrasada_pct          0.55319*** (0.15119)  p = 0.0003
+   ln_apr_total_soles           -5.55711**  (2.48035)  p = 0.0251
+== (a) Sin winsorizar | obs = 1494 | bancos = 16 | R2 within = 0.2137
+   roe_pct                       0.00011*** (0.00001)  p = 0.0000
+   cartera_atrasada_pct          0.28890    (0.25871)  p = 0.2641
+   ln_apr_total_soles           -8.65590**  (3.94900)  p = 0.0284
+== (b) Sin Bank of China | obs = 1440 | bancos = 15 | R2 within = 0.2458
+   roe_pct                       0.09599*** (0.03482)  p = 0.0058
+   cartera_atrasada_pct          0.59229*** (0.15376)  p = 0.0001
+   ln_apr_total_soles           -4.85052*   (2.71568)  p = 0.0741
+== (c) Sin Alfin Banco | obs = 1398 | bancos = 15 | R2 within = 0.1716
+   roe_pct                       0.03651    (0.03689)  p = 0.3224
+   cartera_atrasada_pct          0.61813*** (0.21458)  p = 0.0040
+   ln_apr_total_soles           -5.29279*   (2.73208)  p = 0.0527
+== (d) 2018-2022 | obs = 918 | bancos = 16 | R2 within = 0.3304
+   roe_pct                       0.06889    (0.06584)  p = 0.2954
+   cartera_atrasada_pct          0.19822    (0.22367)  p = 0.3755
+   ln_apr_total_soles           -6.87318*   (3.61336)  p = 0.0572
+== (e) 2023-2025 | obs = 576 | bancos = 16 | R2 within = 0.2469
+   roe_pct                       0.05545    (0.04807)  p = 0.2487
+   cartera_atrasada_pct         -0.20926    (0.37839)  p = 0.5802
+   ln_apr_total_soles          -11.35755**  (4.54260)  p = 0.0124
+== (f) Sin 2020-2021 | obs = 1128 | bancos = 16 | R2 within = 0.2965
+   roe_pct                       0.04189    (0.03898)  p = 0.2825
+   cartera_atrasada_pct          0.94434*** (0.28014)  p = 0.0007
+   ln_apr_total_soles           -5.61780**  (2.53378)  p = 0.0266
+
+Efectos fijos por banco; errores estándar agrupados por banco.
+* p<0.10, ** p<0.05, *** p<0.01
