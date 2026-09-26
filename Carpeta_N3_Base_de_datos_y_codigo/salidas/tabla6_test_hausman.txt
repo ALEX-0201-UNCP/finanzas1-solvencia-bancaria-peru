@@ -1,0 +1,5 @@
+Test de Hausman (Efectos Fijos vs. Efectos Aleatorios)
+Estadistico chi2 = -1.8233
+Grados de libertad = 3
+p-valor = 1.0000
+Conclusion: modelo recomendado = Efectos Aleatorios
