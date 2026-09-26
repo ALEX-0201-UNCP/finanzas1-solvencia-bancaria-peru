@@ -8,10 +8,23 @@
 # Tema N.º 9 (Unidad I): Solvencia bancaria en el Perú — ratio de capital
 #                        global y activos ponderados por riesgo (APR)
 # ----------------------------------------------------------------------------
-# 03_limpieza_datos.py  (v3 — ROE y Cartera Atrasada extraídos y validados
-# contra archivos reales de la SBS)
+# 03_limpieza_datos.py  (v4)
 #
-# Panel final: banco x mes, 2018-01 a 2025-12 (96 meses = 8 años), con
+# Cambios respecto a v3:
+#   - Se quitan las llamadas de nota al pie de los nombres ("*", "**", "1/",
+#     "3/"), que partían a un mismo banco en dos entidades.
+#   - MAPEO_MANUAL_BANCOS une los cambios de nombre ocurridos en 2018-2025
+#     (Continental -> BBVA, Financiero -> Pichincha, Azteca -> Alfin,
+#     Banco de Comercio -> BANCOM).
+#   - Morosidad: se reconoce también la fila "Total Créditos Directo" (sin
+#     "s"), que usan los reportes de 2020 y enero 2021.
+#   - La interpolación SOLO rellena huecos internos de hasta
+#     MAX_MESES_INTERPOLADOS meses seguidos. Ya no se extrapola antes de que
+#     un banco exista ni después de que salga del sistema: el panel queda
+#     NO balanceado, con cada banco solo en los meses en que operó.
+#   - El panel se filtra a los 16 bancos del estudio (BANCOS_ESTUDIO).
+#
+# Panel final: banco x mes, 2018-01 a 2025-12 (hasta 96 meses por banco), con
 # EXACTAMENTE estas 4 variables del modelo (nada más):
 #
 #   ratio_capital_global_pct   Endógena (Y)                  %
@@ -40,8 +53,6 @@
 #
 #    Esta es la fórmula de anualización simple de un flujo acumulado (el
 #    Estado de Ganancias y Pérdidas de la SBS se reinicia cada enero).
-#    *** Si tu curso exige otra definición (p.ej. patrimonio PROMEDIO de
-#    12 meses en el denominador), avísame y se ajusta en una sola función. ***
 #    Los bancos van en BLOQUES DE COLUMNAS (MN / ME / TOTAL); se usa la
 #    columna TOTAL de cada bloque.
 #
@@ -49,17 +60,14 @@
 #    Reporte "Morosidad según tipo y modalidad de crédito". Bancos en
 #    COLUMNAS (una sola columna por banco, sin bloques MN/ME/TOTAL). Se usa
 #    la fila 'Total Créditos Directos', que es la morosidad total del banco
-#    agregando todos los tipos de crédito (no se usa el desagregado por
-#    tipo, que también viene en el archivo pero no se pidió).
+#    agregando todos los tipos de crédito.
 #
 # 4) Cruce entre las 3 fuentes
 #    Los 3 reportes escriben el nombre del banco de forma distinta
 #    ("Banco Continental" vs "B. Continental", sufijos como "(con
-#    sucursales en el exterior)", filas de total del sistema). Se normaliza
-#    el nombre antes de cruzar. Esto NO resuelve cambios de nombre de la
-#    propia entidad en el tiempo (p.ej. Continental -> BBVA); si el conteo
-#    final de bancos no cuadra, hay que revisar la lista impresa al final
-#    y completar MAPEO_MANUAL_BANCOS.
+#    sucursales en el exterior)", notas al pie, filas de total del
+#    sistema). Se normaliza el nombre antes de cruzar y los cambios de
+#    nombre de una misma entidad se unen con MAPEO_MANUAL_BANCOS.
 # ============================================================================
 
 import os
@@ -85,7 +93,6 @@ def obtener_directorio_base():
 
 DIR_BASE = obtener_directorio_base()
 
-# --- AJUSTAR SI TU 02_scraping_web.py GUARDÓ LAS CARPETAS CON OTRO NOMBRE ---
 DIR_RATIO_CAPITAL = os.path.join(DIR_BASE, "datos_crudos", "sbs_ratio_capital_global")
 DIR_ROE = os.path.join(DIR_BASE, "datos_crudos", "sbs_roe")
 DIR_CARTERA = os.path.join(DIR_BASE, "datos_crudos", "sbs_cartera_atrasada")
@@ -95,13 +102,27 @@ RUTA_SALIDA_XLSX = os.path.join(DIR_BASE, "datos_procesados", "datos_procesados_
 
 RANGO_FECHAS = pd.date_range(start="2018-01-31", end="2025-12-31", freq="ME")  # 96 meses = 8 años
 MIN_MESES_POR_BANCO = 12  # bancos con menos datos reales que esto se excluyen del panel
+MAX_MESES_INTERPOLADOS = 3  # huecos internos más largos que esto quedan vacíos
 
-# Si al correr el script ves que un banco quedó partido en dos nombres
-# distintos (típicamente por un cambio de marca, ej. Continental -> BBVA),
-# agrégalo aquí como {"nombre_como_aparece": "nombre_final_deseado"}.
+# Cambios de nombre de una MISMA entidad dentro de 2018-2025. Se unen bajo el
+# nombre vigente para que cada banco sea una sola unidad del panel.
+# {"nombre_como_aparece (ya normalizado)": "nombre_final"}
 MAPEO_MANUAL_BANCOS = {
-    # "Banco Continental": "BBVA Perú",
+    "Banco Continental": "Banco BBVA Perú",     # cambio de marca en 2019
+    "Banco Financiero": "Banco Pichincha",      # cambio de marca en 2018
+    "Banco Azteca Perú": "Alfin Banco",         # cambio de nombre 2021-2022
+    "Banco de Comercio": "BANCOM",              # cambio de nombre en 2023
+    "Banco de China Perú": "Bank of China",     # variante de escritura
 }
+
+# Los 16 bancos del estudio (nombres ya normalizados). Se excluyen del panel
+# Banco Cencosud (salió del sistema en 2019) y Banco BCI Perú (entró en 2022).
+BANCOS_ESTUDIO = [
+    "Banco de Crédito del Perú", "Banco BBVA Perú", "Interbank", "Scotiabank Perú",
+    "Banco Interamericano de Finanzas", "Banco Pichincha", "Mibanco", "Banco GNB",
+    "Banco Falabella Perú", "Banco Ripley", "BANCOM", "Alfin Banco", "Citibank",
+    "Banco ICBC", "Banco Santander Perú", "Bank of China",
+]
 
 # Filas/columnas de agregados del sistema (no son un banco individual):
 # se excluyen de los 3 reportes.
@@ -135,6 +156,7 @@ def normalizar_nombre_banco(nombre):
     n = n.replace("\n", " ")
     n = re.sub(r"\(.*?\)", "", n)              # quita "(con sucursales...)"
     n = re.sub(r"^B\.\s*", "Banco ", n)         # "B. Continental" -> "Banco Continental"
+    n = re.sub(r"[\s\*]*(\d+/)?[\s\*]*$", "", n)  # quita notas al pie: "*", "**", "1/", "3/"
     n = re.sub(r"\s+", " ", n).strip()
     n = MAPEO_MANUAL_BANCOS.get(n, n)
     return n
@@ -361,10 +383,12 @@ def extraer_cartera_atrasada(ruta_archivo):
     if fila_bancos is None:
         raise ValueError("no se encontró la fila de encabezado 'Concepto'")
 
+    # La etiqueta varía entre años: "Total Créditos Directos" y, en 2020 y
+    # enero 2021, "Total Créditos Directo (En Miles S/)".
+    patron_total = re.compile(r"^TOTAL\s+CR[EÉ]DITOS\s+DIRECTO")
     fila_total = next(
         (r for r in range(len(df_raw))
-         if str(df_raw.iloc[r, 0]).strip().upper().startswith("TOTAL CRÉDITOS DIRECTOS")
-         or str(df_raw.iloc[r, 0]).strip().upper().startswith("TOTAL CREDITOS DIRECTOS")),
+         if patron_total.match(str(df_raw.iloc[r, 0]).strip().upper())),
         None
     )
     if fila_total is None:
@@ -396,7 +420,12 @@ def extraer_cartera_atrasada(ruta_archivo):
 # ============================================================================
 
 def extraer_panel_indicador(directorio, funcion_extraccion, nombre_indicador):
-    archivos = sorted(glob.glob(os.path.join(directorio, "*.xls*")))
+    # Sin distinguir mayúsculas: la SBS usa ".XLS" y en Linux/Mac glob sí
+    # distingue "*.xls" de "*.XLS".
+    archivos = sorted(
+        ruta for ruta in glob.glob(os.path.join(directorio, "*"))
+        if ruta.lower().endswith((".xls", ".xlsx"))
+    )
     print(f"\n[{nombre_indicador}] Archivos encontrados: {len(archivos)}")
 
     registros_totales = []
@@ -428,10 +457,23 @@ def extraer_panel_indicador(directorio, funcion_extraccion, nombre_indicador):
     return df, archivos_con_error
 
 
+def interpolar_huecos_cortos(serie, max_huecos):
+    """Interpolación lineal SOLO en huecos internos de hasta `max_huecos`
+    meses seguidos. No extrapola antes del primer dato ni después del
+    último (un banco no puede tener datos antes de existir o después de
+    salir del sistema), y los huecos largos se dejan vacíos."""
+    interpolada = serie.interpolate(method="linear", limit_area="inside")
+    es_nulo = serie.isna()
+    id_bloque = (es_nulo != es_nulo.shift()).cumsum()
+    largo_hueco = es_nulo.groupby(id_bloque).transform("sum")
+    hueco_largo = es_nulo & (largo_hueco > max_huecos)
+    return interpolada.mask(hueco_largo)
+
+
 def completar_indicador_con_interpolacion(df_indicador, columnas_numericas, rango_fechas, min_meses):
-    """Reindexa el panel de UN indicador para cubrir el rango completo de
-    meses y rellena huecos por banco mediante interpolación lineal
-    (autorizado por el docente del curso)."""
+    """Reindexa el panel de UN indicador al rango completo de meses y
+    rellena, por banco, solo los huecos internos cortos (interpolación
+    lineal autorizada por el docente del curso)."""
     df = df_indicador.copy()
     df["fecha"] = pd.to_datetime(df["fecha"])
 
@@ -448,7 +490,7 @@ def completar_indicador_con_interpolacion(df_indicador, columnas_numericas, rang
         )
         df_banco["banco"] = banco
         for columna in columnas_numericas:
-            df_banco[columna] = df_banco[columna].interpolate(method="linear", limit_direction="both")
+            df_banco[columna] = interpolar_huecos_cortos(df_banco[columna], MAX_MESES_INTERPOLADOS)
         paneles_por_banco.append(df_banco)
 
     if not paneles_por_banco:
@@ -496,6 +538,29 @@ def construir_panel_final():
         "ratio_capital_global_pct", "roe_pct", "cartera_atrasada_pct", "apr_total_soles",
     ]]
     df_final = df_final.dropna()
+
+    # Solo los 16 bancos del estudio
+    no_encontrados = sorted(set(BANCOS_ESTUDIO) - set(df_final["banco"]))
+    if no_encontrados:
+        print(f"\n[AVISO] Bancos del estudio sin datos en el panel: {no_encontrados}")
+    df_final = df_final[df_final["banco"].isin(BANCOS_ESTUDIO)].copy()
+    meses_por_banco = df_final.groupby("banco")["fecha"].nunique()
+    incompletos = meses_por_banco[meses_por_banco < len(RANGO_FECHAS)]
+    if not incompletos.empty:
+        print(f"\n[AVISO] Bancos sin los {len(RANGO_FECHAS)} meses completos "
+              f"(no hay dato real en esos meses; no se inventa):")
+        print(incompletos.to_string())
+
+    # Transparencia: cuántas observaciones del panel son reales en las 3
+    # fuentes a la vez y cuántas tienen al menos un valor interpolado.
+    reales = df_capital_crudo[["banco", "fecha"]].merge(
+        df_roe_crudo[["banco", "fecha"]], on=["banco", "fecha"]
+    ).merge(df_cartera_crudo[["banco", "fecha"]], on=["banco", "fecha"]).drop_duplicates()
+    reales["fecha"] = pd.to_datetime(reales["fecha"])
+    n_reales = len(df_final.merge(reales, on=["banco", "fecha"]))
+    print(f"\n[Panel] Observaciones con dato real en las 3 fuentes: {n_reales} de {len(df_final)} "
+          f"({n_reales / len(df_final):.1%}); con algún valor interpolado: {len(df_final) - n_reales}")
+
     df_final["fecha"] = df_final["fecha"].dt.strftime("%Y-%m-%d")
     df_final = df_final.sort_values(["banco", "fecha"]).reset_index(drop=True)
 
@@ -515,6 +580,9 @@ def imprimir_resumen(df_final, ruta_csv, ruta_xlsx):
     print(f"Meses cubiertos       : {df_final['fecha'].nunique()} "
           f"({df_final['fecha'].min()} a {df_final['fecha'].max()})")
     print(f"Columnas              : {list(df_final.columns)}")
+    print("Meses por banco (panel no balanceado):")
+    resumen_bancos = df_final.groupby("banco")["fecha"].agg(meses="count", desde="min", hasta="max")
+    print(resumen_bancos.to_string())
     print(f"CSV guardado en       : {ruta_csv}")
     print(f"XLSX guardado en      : {ruta_xlsx}")
     print("=" * 70)

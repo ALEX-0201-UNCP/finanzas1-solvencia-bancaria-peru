@@ -1,5 +1,5 @@
-﻿,Ratio Capital Global,ROE,Cartera Atrasada,APR total
-Ratio Capital Global,1.0,0.071,-0.281,-0.125
-ROE,0.071,1.0,-0.473,0.161
-Cartera Atrasada,-0.281,-0.473,1.0,0.007
-APR total,-0.125,0.161,0.007,1.0
+﻿,Ratio Capital Global,ROE,Cartera Atrasada,ln(APR)
+Ratio Capital Global,1.0,0.019,-0.453,-0.497
+ROE,0.019,1.0,-0.467,0.454
+Cartera Atrasada,-0.453,-0.467,1.0,0.094
+ln(APR),-0.497,0.454,0.094,1.0

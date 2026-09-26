@@ -1,5 +1,11 @@
-Test de Hausman (Efectos Fijos vs. Efectos Aleatorios)
-Estadistico chi2 = -1.8233
-Grados de libertad = 3
-p-valor = 1.0000
-Conclusion: modelo recomendado = Efectos Aleatorios
+Pruebas de especificación: Efectos Fijos vs. Efectos Aleatorios
+
+1) Hausman clásico (covarianzas no robustas)
+   Estadístico chi2 = -5.1519 | g.l. = 3 | p-valor = no definido
+   Nota: estadístico negativo; la diferencia de covarianzas no es definida positiva y el test clásico no es concluyente.
+
+2) Mundlak robusto a clusters por banco (criterio de decisión)
+   H0: las medias por banco de los regresores no son significativas (RE consistente)
+   Estadístico Wald chi2 = 13.9810 | g.l. = 3 | p-valor = 0.0029
+
+Conclusión: modelo recomendado = Efectos Fijos
