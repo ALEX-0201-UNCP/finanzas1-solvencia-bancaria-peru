@@ -95,13 +95,18 @@ Analizar la evolución de la solvencia bancaria en el Perú (medida con el **Rat
 ---
 
 ## Secuencia de ejecución
-Instalar dependencias con `pip install -r requirements.txt` y ejecutar en este orden:
-1. `python codigo/01_extraccion_api.py` ➔ Descarga datos agregados del Banco Mundial.
-2. `python codigo/02_scraping_web.py` ➔ Descarga los 3 reportes SBS en `/datos_crudos` (omite los ya descargados).
-3. `python codigo/03_limpieza_datos.py` ➔ Construye el panel de 4 variables para los 16 bancos.
-4. `python codigo/04_analisis.py` ➔ Tablas, figuras, modelos de panel y pruebas de especificación.
-5. `python codigo/05_robustez.py` ➔ Evolución anual, promedios por banco, pruebas de robustez y figuras 5 a 7.
-6. `python codigo/00_generar_entregables_carpeta3.py` ➔ Actualiza README, diccionario, requirements e incidencias con las cifras del panel.
+
+**Requisitos previos:** Python 3.12 o superior y conexión a internet (solo para los scripts 01 y 02). En Spyder, abrir cada script y ejecutarlo con F5 (Spyder usa la carpeta del script como directorio de trabajo).
+
+1. Instalar las librerías (una sola vez), desde la carpeta `Carpeta_N3_Base_de_datos_y_codigo`: `pip install -r requirements.txt`
+2. **Entrar a la carpeta `codigo`** (importante: los scripts deben ejecutarse desde ahí): `cd codigo`
+3. Ejecutar los scripts en este orden:
+   1. `python 01_extraccion_api.py` ➔ Descarga datos agregados del Banco Mundial.
+   2. `python 02_scraping_web.py` ➔ Descarga los 3 reportes SBS en `/datos_crudos` (omite los ya descargados).
+   3. `python 03_limpieza_datos.py` ➔ Construye el panel de 4 variables para los 16 bancos.
+   4. `python 04_analisis.py` ➔ Tablas, figuras, modelos de panel y pruebas de especificación.
+   5. `python 05_robustez.py` ➔ Evolución anual, promedios por banco, pruebas de robustez y figuras 5 a 7.
+   6. `python 00_generar_entregables_carpeta3.py` ➔ Actualiza README (con el hash), diccionario, requirements e incidencias con las cifras del panel.
 
 ---
 
@@ -113,4 +118,6 @@ Instalar dependencias con `pip install -r requirements.txt` y ejecutar en este o
 
 ## Verificación de integridad
 - **Archivo de datos principal:** `datos_procesados/datos_procesados_2024200492K.csv`
+- **Hash SHA-256:** `c60d178bff906b749008e322d2c140eb288ef025f8690f69e131e266b2da266b`
+- **Cómo verificarlo:** en Windows, `certutil -hashfile datos_procesados\datos_procesados_2024200492K.csv SHA256`; en macOS/Linux, `shasum -a 256 datos_procesados/datos_procesados_2024200492K.csv`. Tras ejecutar `03_limpieza_datos.py` el hash debe coincidir.
 - **Trazabilidad:** `log_ejecucion.txt` registra cada petición HTTP con fecha, URL y estado.

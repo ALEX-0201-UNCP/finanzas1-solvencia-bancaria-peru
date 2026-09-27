@@ -1,19 +1,24 @@
+# Nombres y apellidos: Chancha Santiago Alex Omar
+# Código de matrícula: 2024200492K
+# Tema N.º 9: Solvencia bancaria en el Perú — ratio de capital global y APR
+# Fecha de extracción: 2026-09-26
 # ============================================================================
 # UNIVERSIDAD NACIONAL DEL CENTRO DEL PERÚ
 # Generador integral de entregables para la Carpeta N°3 (Base de datos)
-# Nombres y apellidos : Chancha Santiago Alex Omar
-# Código de matrícula : 2024200492K
 # ----------------------------------------------------------------------------
-# 00_generar_entregables_carpeta3.py  (v3)
+# 00_generar_entregables_carpeta3.py  (v4)
 # Ejecutar AL FINAL (después de 03, 04 y 05): lee el panel procesado y los
 # datos del Banco Mundial para que el README y el diccionario muestren cifras
 # reales (n.º de bancos, observaciones, cobertura) y no valores escritos a mano.
+# v4: calcula el hash SHA-256 del archivo procesado y lo escribe en el README;
+#     indica ejecutar los scripts desde la carpeta /codigo.
 # ============================================================================
-
+ 
 import os
+import hashlib
 import pandas as pd
-
-
+ 
+ 
 def obtener_directorio_base():
     try:
         dir_actual = os.path.dirname(os.path.abspath(__file__))
@@ -22,22 +27,26 @@ def obtener_directorio_base():
     if os.path.basename(dir_actual).lower() == "codigo":
         return os.path.dirname(dir_actual)
     return dir_actual
-
-
+ 
+ 
 DIR_BASE = obtener_directorio_base()
 RUTA_PANEL = os.path.join(DIR_BASE, "datos_procesados", "datos_procesados_2024200492K.csv")
 RUTA_BM = os.path.join(DIR_BASE, "datos_crudos", "datos_crudos_2024200492K_bancomundial.csv")
-
+ 
 print("====================================================================")
 print("Generando entregables de la Carpeta N°3...")
 print("====================================================================\n")
-
+ 
 # ----------------------------------------------------------------------------
 # 0. CIFRAS REALES DEL PANEL Y DEL BANCO MUNDIAL
 # ----------------------------------------------------------------------------
 if not os.path.exists(RUTA_PANEL):
     raise SystemExit(f"[ERROR] No existe {RUTA_PANEL}. Ejecuta antes 03_limpieza_datos.py.")
-
+ 
+with open(RUTA_PANEL, "rb") as f_hash:
+    HASH_SHA256 = hashlib.sha256(f_hash.read()).hexdigest()
+print(f"Hash SHA-256 del panel procesado: {HASH_SHA256}\n")
+ 
 panel = pd.read_csv(RUTA_PANEL, encoding="utf-8-sig")
 bancos = sorted(panel["banco"].unique())
 N_BANCOS = len(bancos)
@@ -46,7 +55,7 @@ N_MESES = panel["fecha"].nunique()
 FECHA_MIN = panel["fecha"].min()[:7]
 FECHA_MAX = panel["fecha"].max()[:7]
 LISTA_BANCOS = ", ".join(bancos)
-
+ 
 meses_por_banco = panel.groupby("banco")["fecha"].nunique()
 incompletos = meses_por_banco[meses_por_banco < N_MESES]
 if incompletos.empty:
@@ -54,7 +63,7 @@ if incompletos.empty:
 else:
     detalle = ", ".join(f"{b} ({m} meses)" for b, m in incompletos.items())
     TEXTO_BALANCE = f"panel no balanceado; bancos con menos de {N_MESES} meses: {detalle}"
-
+ 
 if os.path.exists(RUTA_BM):
     bm = pd.read_csv(RUTA_BM)
     anios_con_ratio = bm.loc[bm["ratio_capital_global"].notna(), "anio"]
@@ -62,12 +71,12 @@ if os.path.exists(RUTA_BM):
                     f"(ratio de capital disponible hasta {int(anios_con_ratio.max())})")
 else:
     COBERTURA_BM = "archivo no encontrado; ejecutar 01_extraccion_api.py"
-
+ 
 print(f"Panel: {N_OBS} observaciones, {N_BANCOS} bancos, {N_MESES} meses ({FECHA_MIN} a {FECHA_MAX})")
 print(f"Estructura: {TEXTO_BALANCE}")
 print(f"Banco Mundial: {COBERTURA_BM}\n")
-
-
+ 
+ 
 # ----------------------------------------------------------------------------
 # 1. GENERACIÓN DE .env.example  (valores de referencia usados por los scripts)
 # ----------------------------------------------------------------------------
@@ -75,7 +84,7 @@ ruta_env = os.path.join(DIR_BASE, ".env.example")
 contenido_env = """# Parámetros de referencia de la extracción (los scripts los tienen fijos en
 # el código; este archivo documenta los valores usados)
 # Finanzas I - UNCP (Chancha Santiago Alex Omar - 2024200492K)
-
+ 
 API_WORLD_BANK_URL=https://api.worldbank.org/v2/country/PER/indicator/
 SBS_BASE_URL=https://intranet2.sbs.gob.pe/estadistica/financiera/
 USER_AGENT=Mozilla/5.0 (investigacion academica UNCP - Finanzas I - Chancha Santiago Alex Omar)
@@ -85,15 +94,15 @@ PAUSA_ENTRE_SOLICITUDES_SEG=1
 with open(ruta_env, "w", encoding="utf-8") as f:
     f.write(contenido_env)
 print(f"✅ Creado/Actualizado: {ruta_env}")
-
-
+ 
+ 
 # ----------------------------------------------------------------------------
 # 2. GENERACIÓN DE requirements.txt
 # ----------------------------------------------------------------------------
 ruta_req = os.path.join(DIR_BASE, "requirements.txt")
 contenido_req = """# Entorno de ejecución Finanzas I - UNCP
 # Chancha Santiago Alex Omar (2024200492K)
-
+ 
 pandas>=2.0.0
 numpy>=1.24.0
 requests>=2.28.0
@@ -107,56 +116,56 @@ scipy>=1.10.0
 with open(ruta_req, "w", encoding="utf-8") as f:
     f.write(contenido_req)
 print(f"✅ Creado/Actualizado: {ruta_req}")
-
-
+ 
+ 
 # ----------------------------------------------------------------------------
 # 3. GENERACIÓN DE incidencias_fuente.md
 #    (string r"""...""" para que "\times" no se convierta en tabulación)
 # ----------------------------------------------------------------------------
 ruta_incidencias = os.path.join(DIR_BASE, "incidencias_fuente.md")
 contenido_incidencias = r"""# Registro de Incidencias de Fuente y Trazabilidad
-
+ 
 **Autor:** Chancha Santiago Alex Omar (Código: 2024200492K)  
 **Proyecto:** Solvencia bancaria en el Perú (2018-2025)
-
+ 
 ## Incidencias detectadas y soluciones aplicadas
-
+ 
 1. **Abreviatura de marzo en las URL de la SBS:**
    - *Incidencia:* La SBS nombra los archivos de marzo con "ma" (p. ej. `B-2402-ma2024.XLS`). La primera versión del scraper usaba "mr" y los 8 meses de marzo devolvían HTTP 404.
    - *Solución:* Se corrigió la abreviatura en `02_scraping_web.py` y se re-ejecutó la descarga (solo se piden los archivos faltantes).
-
+ 
 2. **Formatos de archivo distintos:**
    - *Incidencia:* Los reportes B-2402 y B-2362 son Excel 97-2003 (`.xls` binario) y el B-2201 es Excel 2007+, aunque todos usan la extensión `.XLS`.
    - *Solución:* Se requieren `xlrd` y `openpyxl`; pandas elige el lector según el contenido del archivo.
-
+ 
 3. **Ajuste Regulatorio Basilea III (Reporte SBS B-2402):**
    - *Incidencia:* Hasta 2020 el reporte no publica el APR total, solo el requerimiento de patrimonio efectivo; desde 2021 publica directamente el APR.
    - *Solución:* Detección de columnas por texto (no por posición). Para 2018-2020, APR = requerimiento total $\times 10$ (identidad con el mínimo de 10 %).
-
+ 
 4. **Divergencia de Formato Institucional en SBS:**
    - *Incidencia:* B-2402 presenta bancos en filas, B-2201 en bloques de columnas (MN / ME / TOTAL) y B-2362 en columnas simples.
    - *Solución:* Una función de lectura específica por reporte en `03_limpieza_datos.py`.
-
+ 
 5. **Nombres de entidades no homogéneos:**
    - *Incidencia:* Llamadas de nota al pie pegadas al nombre (`*`, `**`, `1/`, `3/`) y cambios de nombre de una misma entidad: Banco Continental → Banco BBVA Perú, Banco Financiero → Banco Pichincha, Banco Azteca Perú → Alfin Banco, Banco de Comercio → BANCOM.
    - *Solución:* Limpieza de notas al pie con expresión regular y tabla `MAPEO_MANUAL_BANCOS` que une cada entidad bajo su nombre vigente.
-
+ 
 6. **Etiqueta distinta de la fila de morosidad total (B-2362):**
    - *Incidencia:* En 2020 y enero 2021 la fila se titula "Total Créditos Directo (En Miles S/)" en lugar de "Total Créditos Directos"; el valor sigue siendo el ratio en %.
    - *Solución:* Búsqueda de la fila con la expresión regular `TOTAL CR[EÉ]DITOS DIRECTO`.
-
+ 
 7. **Flujos Acumulados vs. Variables de Stock (ROE en B-2201):**
    - *Incidencia:* El Resultado Neto del Ejercicio es acumulado en el año calendario ($m \in [1, 12]$).
    - *Solución:* Anualización $ROE_{i,t} = \dfrac{U_{i,m} / m \times 12}{Patrimonio_{i,t}} \times 100$.
-
+ 
 8. **Selección de bancos, entradas y salidas del sistema:**
    - *Incidencia:* Durante 2018-2025 algunas entidades entran o salen del sistema. Banco Cencosud salió en 2019 y Banco BCI Perú entró en 2022. Bank of China inició operaciones en 2020 y no registró créditos hasta julio de 2021, por lo que no tiene morosidad antes de esa fecha.
    - *Solución:* El estudio se limita a 16 bancos (lista `BANCOS_ESTUDIO`), excluyendo Cencosud y BCI Perú. No se inventan datos para meses en que un banco no operaba: Bank of China entra al panel desde 2021-07 (panel no balanceado). La interpolación lineal intrabanco se aplica solo a huecos internos de hasta 3 meses seguidos, sin extrapolar.
-
+ 
 9. **Valores extremos de ROE y ratio de capital:**
    - *Incidencia:* Entidades con patrimonio casi nulo (Alfin Banco 2021-2022) generan ROE de miles de por ciento; bancos recién creados tienen ratios de capital muy altos por su APR pequeño.
    - *Solución:* Winsorización al percentil 1 y 99 de ambas variables en `04_analisis.py` (detalle en `salidas/nota_winsorizacion.txt`).
-
+ 
 10. **Sensibilidad de los resultados a la muestra:**
    - *Incidencia:* Los valores extremos de Alfin Banco, la entrada tardía de Bank of China, la pandemia y la reforma de Basilea III de 2023 podrían condicionar los coeficientes estimados.
    - *Solución:* El script `05_robustez.py` reestima el modelo de efectos fijos sin winsorizar, sin Bank of China, sin Alfin Banco, por subperiodos (2018-2022 y 2023-2025) y sin 2020-2021 (detalle en `salidas/tabla9_robustez.txt`).
@@ -164,8 +173,8 @@ contenido_incidencias = r"""# Registro de Incidencias de Fuente y Trazabilidad
 with open(ruta_incidencias, "w", encoding="utf-8") as f:
     f.write(contenido_incidencias)
 print(f"✅ Creado/Actualizado: {ruta_incidencias}")
-
-
+ 
+ 
 # ----------------------------------------------------------------------------
 # 4. GENERACIÓN DE diccionario_variables.xlsx / .csv
 # ----------------------------------------------------------------------------
@@ -227,7 +236,7 @@ datos_diccionario = [
         "Descripción": "ln(apr_total_soles). Escala del banco para controlar heterogeneidad.",
     },
 ]
-
+ 
 df_diccionario = pd.DataFrame(datos_diccionario)
 ruta_dicc_xlsx = os.path.join(DIR_BASE, "diccionario_variables.xlsx")
 ruta_dicc_csv = os.path.join(DIR_BASE, "diccionario_variables.csv")
@@ -235,8 +244,8 @@ df_diccionario.to_excel(ruta_dicc_xlsx, index=False)
 df_diccionario.to_csv(ruta_dicc_csv, index=False, encoding="utf-8-sig")
 print(f"✅ Creado/Actualizado: {ruta_dicc_xlsx}")
 print(f"✅ Creado/Actualizado: {ruta_dicc_csv}")
-
-
+ 
+ 
 # ----------------------------------------------------------------------------
 # 5. GENERACIÓN DE README.md
 # ----------------------------------------------------------------------------
@@ -338,13 +347,18 @@ lineas_readme = [
     "---",
     "",
     "## Secuencia de ejecución",
-    "Instalar dependencias con `pip install -r requirements.txt` y ejecutar en este orden:",
-    "1. `python codigo/01_extraccion_api.py` ➔ Descarga datos agregados del Banco Mundial.",
-    "2. `python codigo/02_scraping_web.py` ➔ Descarga los 3 reportes SBS en `/datos_crudos` (omite los ya descargados).",
-    "3. `python codigo/03_limpieza_datos.py` ➔ Construye el panel de 4 variables para los 16 bancos.",
-    "4. `python codigo/04_analisis.py` ➔ Tablas, figuras, modelos de panel y pruebas de especificación.",
-    "5. `python codigo/05_robustez.py` ➔ Evolución anual, promedios por banco, pruebas de robustez y figuras 5 a 7.",
-    "6. `python codigo/00_generar_entregables_carpeta3.py` ➔ Actualiza README, diccionario, requirements e incidencias con las cifras del panel.",
+    "",
+    "**Requisitos previos:** Python 3.12 o superior y conexión a internet (solo para los scripts 01 y 02). En Spyder, abrir cada script y ejecutarlo con F5 (Spyder usa la carpeta del script como directorio de trabajo).",
+    "",
+    "1. Instalar las librerías (una sola vez), desde la carpeta `Carpeta_N3_Base_de_datos_y_codigo`: `pip install -r requirements.txt`",
+    "2. **Entrar a la carpeta `codigo`** (importante: los scripts deben ejecutarse desde ahí): `cd codigo`",
+    "3. Ejecutar los scripts en este orden:",
+    "   1. `python 01_extraccion_api.py` ➔ Descarga datos agregados del Banco Mundial.",
+    "   2. `python 02_scraping_web.py` ➔ Descarga los 3 reportes SBS en `/datos_crudos` (omite los ya descargados).",
+    "   3. `python 03_limpieza_datos.py` ➔ Construye el panel de 4 variables para los 16 bancos.",
+    "   4. `python 04_analisis.py` ➔ Tablas, figuras, modelos de panel y pruebas de especificación.",
+    "   5. `python 05_robustez.py` ➔ Evolución anual, promedios por banco, pruebas de robustez y figuras 5 a 7.",
+    "   6. `python 00_generar_entregables_carpeta3.py` ➔ Actualiza README (con el hash), diccionario, requirements e incidencias con las cifras del panel.",
     "",
     "---",
     "",
@@ -356,15 +370,17 @@ lineas_readme = [
     "",
     "## Verificación de integridad",
     "- **Archivo de datos principal:** `datos_procesados/datos_procesados_2024200492K.csv`",
+    f"- **Hash SHA-256:** `{HASH_SHA256}`",
+    "- **Cómo verificarlo:** en Windows, `certutil -hashfile datos_procesados\\datos_procesados_2024200492K.csv SHA256`; en macOS/Linux, `shasum -a 256 datos_procesados/datos_procesados_2024200492K.csv`. Tras ejecutar `03_limpieza_datos.py` el hash debe coincidir.",
     "- **Trazabilidad:** `log_ejecucion.txt` registra cada petición HTTP con fecha, URL y estado.",
     "",
 ]
-
+ 
 ruta_readme = os.path.join(DIR_BASE, "README.md")
 with open(ruta_readme, "w", encoding="utf-8") as f:
     f.write("\n".join(lineas_readme))
 print(f"✅ Creado/Actualizado: {ruta_readme}")
-
+ 
 print("\n====================================================================")
 print("¡Todos los entregables para la Carpeta N°3 se han creado con éxito!")
 print("====================================================================")
